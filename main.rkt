@@ -24,6 +24,8 @@
   [in-cartesian-product (->* () () #:rest (listof (sequence/c any/c)) sequence?)]
 
   [sequence-take (-> sequence? exact-nonnegative-integer? sequence?)]
+  [sequence-interleave (->* () () #:rest (listof sequence?) sequence?)]
+  [sequence-interleave-longest (->* () () #:rest (listof sequence?) sequence?)]
   ))
 
 ;;; count
@@ -213,6 +215,14 @@
          #:continue-after-pos+val? (lambda _ (ormap (lambda (more?) (more?)) more?s)))))]))
 
 ;;; product
+
+(define (initiate-generator-sequence gen)
+  (initiate-sequence
+   #:pos->element list-values
+   #:next-pos (lambda (_) (gen))
+   #:init-pos (gen)
+   #:continue-with-pos? (lambda (pos) (not (eof-object? pos)))))
+
 (define-coroutine-generator (generate-cartesian-products lol)
   (unless (null? lol)
     (let loop ([prod '()]
@@ -225,18 +235,48 @@
 (define (in-cartesian-product . seqs)
   (make-do-sequence
    (lambda ()
-     (define next-cp (generate-cartesian-products (map sequence->list seqs)))
-     (initiate-sequence
-      #:pos->element list-values
-      #:next-pos (lambda (_) (next-cp))
-      #:init-pos (next-cp)
-      #:continue-with-pos? (lambda (p) (not (eof-object? p)))))))
-  
+     (initiate-generator-sequence (generate-cartesian-products (map sequence->list seqs))))))
+
 ;;; permutations: in-permutations
 
 ;;; combinations: in-combinations
 
 ;;; combinations_with_replacement: not implemented
+
+;;;----------------
+
+(define-coroutine-generator (interleaver seqs longest?)
+  (define-values (orig-more?s orig-getters)
+    (for/lists (more?s getters)
+               ([seq (in-list seqs)])
+      (sequence-generate seq)))
+  (let loop ((more?s orig-more?s)
+             [getters orig-getters]
+             [used-more?s '()]
+             [used-getters '()])
+    (cond
+      [(null? more?s)
+       (unless (null? used-more?s)
+         (cond
+           [longest?
+            (loop (reverse used-more?s) (reverse used-getters) '() '())]
+           [(andmap (lambda (more?) (more?)) used-more?s)
+            (loop (reverse used-more?s) (reverse used-getters) '() '())]))]
+      [((car more?s))
+       (yield (list/mv ((car getters))))
+       (loop (cdr more?s) (cdr getters) (cons (car more?s) used-more?s) (cons (car getters) used-getters))]
+      (else
+       (loop (cdr more?s) (cdr getters) used-more?s used-getters)))))
+
+(define (sequence-interleave . seqs)
+  (make-do-sequence
+   (lambda ()
+     (initiate-generator-sequence (interleaver seqs #f)))))
+
+(define (sequence-interleave-longest . seqs)
+  (make-do-sequence
+   (lambda ()
+     (initiate-generator-sequence (interleaver seqs #t)))))
 
 (module+ test
   (check-equal? (sequence->list (in-repeat 'a 5)) '(a a a a a))
@@ -252,10 +292,10 @@
   (check-equal? (sequence->list (sequence-drop-while (lambda (x) (< x 5)) '(1 4 6 3 8))) '(6 3 8))
   (check-equal? (sequence->list (sequence-drop-while (lambda (x) (< x 5)) '(1 4 3))) '())
   (check-equal? (for/list ([(v i) (sequence-drop-while (lambda (v i) (< v 5)) (in-indexed '(1 4 6 3 8)))]) (list i v)) '((2 6) (3 3) (4 8)))
-  
+
   (check-equal? (sequence->list (sequence-filter-not (lambda (x) (< x 5)) '(1 4 6 3 8))) '(6 8))
   (check-equal? (for/list ([(v i) (sequence-filter-not (lambda (v i) (odd? i)) (in-indexed '(1 2 3 4 5)))]) v) '(1 3 5))
-  
+
   (check-equal? (for/list ([(key group) (in-group-by '#("a" "b" "def") #:key string-length)]) (list key group)) '((1 ("a" "b")) (3 ("def"))))
   (check-equal? (for/list ([(key group) (in-group-by '(A A A A B B B C C D A A B B B) #:equal? eq?)]) key) '(A B C D A B))
 
@@ -269,4 +309,8 @@
   (check-equal? (for/list ([(a b) (in-longest-parallel '(a b c d) '(x y) #:fill-value 'z)]) (list a b)) '((a x) (b y) (c z) (d z)))
 
   (check-equal? (for/list ([(a b) (in-cartesian-product '(a b c d) '(x y))]) (list a b)) '((a x) (a y) (b x) (b y) (c x) (c y) (d x) (d y)))
+
+  (check-equal? (sequence->list (sequence-interleave '(1 2 3) '#(4 5) (in-range 6 9))) '(1 4 6 2 5 7))
+  (check-equal? (sequence->list (sequence-interleave-longest '(1 2 3) '#(4 5) (in-range 6 9))) '(1 4 6 2 5 7 3 8))
+
 )

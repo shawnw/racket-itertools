@@ -138,3 +138,17 @@ Additional functions not taken directly from @tt{itertools}.
 Returns a sequence of the first @code{len} elements of @code{seq} (Or less if @code{seq} is a finite sequence with fewer elements).
 
 }
+
+@defproc[(sequence-interleave [seq sequence?] ...) sequence?]{
+
+ Return a new sequence pulling an element at a time from each argument sequence in turn until one is exhausted. All sequences should
+ return the same number of values. Equivalent to @tt{more_itertools.interleave}.
+
+}
+
+@defproc[(sequence-interleave-longest [seq sequence?] ...) sequence?]{
+
+ Return a new sequence pulling an element at a time from each argument sequence in turn, skipping exhausted ones until all are used up.
+ All sequences should return the same number of values. Equivalent to @tt{more_itertools.interleave_longest}.
+
+}
