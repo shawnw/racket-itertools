@@ -13,11 +13,11 @@ This module implements the bits of the Python @hyperlink["https://docs.python.or
 another in Racket. The provided functions all work with sequences, which along with streams, are the closest things to Python iterables in Racket (But sequences
 are much more fundamental to Racket, so that's what you get).
 
-Conventions followed by this module: Functions that return a new, altered sequence have a @tt{in-} prefix, and ones that just filter existing
-sequences start with @tt{sequence-}, which seems to be the general Racket practice. Where Python uses tuples, these functions instead generally return multiple values.
-If you need a single value instead, wrap them in a list with @code{in-values-sequence}.
+Conventions followed by this module: Functions that return a new, altered sequence generally have a @tt{in-} prefix, and ones that just filter or pass through existing
+sequences usually start with @tt{sequence-}, which seems to be the general Racket practice (except when it's not). Where Python uses tuples, these functions instead generally
+return multiple values. If you need a single value instead, wrap them in a list with @code{in-values-sequence}.
 
-Select functions from the @hyperlink["https://pypi.org/project/more-itertools/"]{@tt{more-itertools} library} might make their way in here too; please
+Select functions from the @hyperlink["https://pypi.org/project/more-itertools/"]{@tt{more-itertools} library} and other sources might make their way in here too; please
 @hyperlink["https://github.com/shawnw/racket-itertools/issues"]{file issues} (And preferrably a pull request too) for any desired ones.
 
 @section{itertools API}
@@ -52,7 +52,12 @@ Select functions from the @hyperlink["https://pypi.org/project/more-itertools/"]
 
 @bold{@tt{itertools.chain}} is @code{in-sequences} in Racket.
 
-@bold{@tt{itertools.chain.from_iterable}} is currently not implemented.
+@defproc[(in-sequences* [seq (sequence/c sequence?)]) sequence?]{
+
+ Flattens a sequence of sequences into their individual elements. All subsequenes should have the same number of values.
+ Equivalent to @tt{itertools.chain.from_iterable}.
+
+ }
 
 @defproc[(sequence-compress [data sequence?] [selectors (sequence/c any/c)]) sequence?]{
 

@@ -14,6 +14,7 @@
   [in-count (->* () (real? real?) sequence?)]
   [in-repeat (->* (any/c) ((or/c #f exact-nonnegative-integer?)) sequence?)]
   [in-accumulate (->* ((sequence/c any/c)) ((-> any/c any/c any/c) any/c) sequence?)]
+  [in-sequences* (-> (sequence/c sequence?) sequence?)]
   [sequence-compress (-> sequence? (sequence/c any/c) sequence?)]
   [sequence-drop-while (-> procedure? sequence? sequence?)]
   [sequence-filter-not (-> procedure? sequence? sequence?)]
@@ -84,6 +85,35 @@
 ;;; batched: in-slice
 
 ;;; chain: in-sequences
+
+;;; chain.from_iterable
+(define (in-sequences* seq)
+  (make-do-sequence
+   (lambda ()
+     (define-values (more? get) (sequence-generate seq))
+     (define current-more? #f)
+     (define current-get #f)
+     (initiate-sequence
+      #:pos->element (lambda (_) (current-get))
+      #:next-pos values
+      #:init-pos #t
+      #:continue-with-pos?
+      (lambda (_)
+        (let loop ()
+          (cond
+            [(eq? current-more? #f)
+             (cond
+               [(more?)
+                (set!-values (current-more? current-get) (sequence-generate (get)))
+                (loop)]
+               [else #f])]
+            [(current-more?) #t]
+            [else
+             (set! current-more? #f)
+             (set! current-get #f)
+             (loop)])))))))
+
+
 
 ;;; compress
 (define (sequence-compress data selectors)
@@ -285,6 +315,8 @@
   (check-equal? (sequence->list (in-accumulate '(1 2 3 4 5))) '(1 3 6 10 15))
   (check-equal? (sequence->list (in-accumulate '(1 2 3 4 5) + 100)) '(100 101 103 106 110 115))
   (check-equal? (sequence->list (in-accumulate '(1 2 3 4 5) *)) '(1 2 6 24 120))
+
+  (check-equal? (sequence->list (in-sequences* (in-list '((1 2) (3 4) #(5 6))))) '(1 2 3 4 5 6))
 
   (check-equal? (sequence->list (sequence-compress '(a b c d e f) '(#t #f #t #f #t #t))) '(a c e f))
   (check-equal? (for/list ([(v i) (sequence-compress (in-indexed '(a b c d e f)) '(#t #f #t #f #t #t))]) (add1 i)) '(1 3 5 6))
