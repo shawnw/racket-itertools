@@ -244,7 +244,7 @@
                                fill))))
          #:next-pos values
          #:init-pos #t
-         #:continue-after-pos+val? (lambda _ (ormap (lambda (more?) (more?)) more?s)))))]))
+         #:continue-after-pos+val? (lambda _ (ormap funcall-procedure more?s)))))]))
 
 ;;; product
 
@@ -292,7 +292,7 @@
          (cond
            [longest?
             (loop (reverse used-more?s) (reverse used-getters) '() '())]
-           [(andmap (lambda (more?) (more?)) used-more?s)
+           [(andmap funcall-procedure used-more?s)
             (loop (reverse used-more?s) (reverse used-getters) '() '())]))]
       [((car more?s))
        (yield (list/mv ((car getters))))
