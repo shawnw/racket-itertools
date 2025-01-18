@@ -324,7 +324,7 @@
   (make-do-sequence
    (lambda ()
      (initiate-sequence
-      #:pos->element (lambda (_) (list-values (cons val1 vals)))
+      #:pos->element (apply constantly val1 vals)
       #:next-pos (if count add1 values)
       #:init-pos 0
       #:continue-with-pos? (if count (lambda (n) (< n count)) always)))))
