@@ -302,15 +302,23 @@
 
 ;;; more_itertools.interleave
 (define (sequence-interleave . seqs)
-  (make-do-sequence
-   (lambda ()
-     (initiate-generator-sequence (interleaver seqs #f)))))
+  (cond
+    [(null? seqs) empty-sequence]
+    [(null? (cdr seqs)) (car seqs)]
+    [else
+     (make-do-sequence
+      (lambda ()
+        (initiate-generator-sequence (interleaver seqs #f))))]))
 
 ;;; more_itertools.interleave_longest
 (define (sequence-interleave-longest . seqs)
-  (make-do-sequence
-   (lambda ()
-     (initiate-generator-sequence (interleaver seqs #t)))))
+  (cond
+    [(null? seqs) empty-sequence]
+    [(null? (cdr seqs)) (car seqs)]
+    [else
+     (make-do-sequence
+      (lambda ()
+        (initiate-generator-sequence (interleaver seqs #t))))]))
 
 (define (in-repeat* val1 #:count [count #f] . vals)
   (make-do-sequence
