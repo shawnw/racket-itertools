@@ -27,6 +27,8 @@
   [sequence-take (-> sequence? exact-nonnegative-integer? sequence?)]
   [sequence-interleave (->* () () #:rest (listof sequence?) sequence?)]
   [sequence-interleave-longest (->* () () #:rest (listof sequence?) sequence?)]
+  [in-repeat* (->* (any/c) (#:count (or/c #f exact-positive-integer?)) #:rest (listof any/c) sequence?)]
+  [sequence-repeat-each (->* (sequence?) (exact-positive-integer?) sequence?)]
   ))
 
 ;;; count
@@ -298,15 +300,30 @@
       (else
        (loop (cdr more?s) (cdr getters) used-more?s used-getters)))))
 
+;;; more_itertools.interleave
 (define (sequence-interleave . seqs)
   (make-do-sequence
    (lambda ()
      (initiate-generator-sequence (interleaver seqs #f)))))
 
+;;; more_itertools.interleave_longest
 (define (sequence-interleave-longest . seqs)
   (make-do-sequence
    (lambda ()
      (initiate-generator-sequence (interleaver seqs #t)))))
+
+(define (in-repeat* val1 #:count [count #f] . vals)
+  (make-do-sequence
+   (lambda ()
+     (initiate-sequence
+      #:pos->element (lambda (_) (list-values (cons val1 vals)))
+      #:next-pos (if count add1 values)
+      #:init-pos 0
+      #:continue-with-pos? (if count (lambda (n) (< n count)) always)))))
+
+;;; more_itertools.repeat_each
+(define (sequence-repeat-each seq [n 2])
+  (in-sequences* (sequence-map (lambda vals (apply in-repeat* #:count n vals)) seq)))
 
 (module+ test
   (check-equal? (sequence->list (in-repeat 'a 5)) '(a a a a a))
@@ -344,5 +361,9 @@
 
   (check-equal? (sequence->list (sequence-interleave '(1 2 3) '#(4 5) (in-range 6 9))) '(1 4 6 2 5 7))
   (check-equal? (sequence->list (sequence-interleave-longest '(1 2 3) '#(4 5) (in-range 6 9))) '(1 4 6 2 5 7 3 8))
+
+  (check-equal? (for/list ([(a b) (sequence-take (in-repeat* 1 2) 3)]) (list a b)) '((1 2) (1 2) (1 2)))
+  (check-equal? (for/list ([(a b) (in-repeat* 1 2 #:count 3)]) (list a b)) '((1 2) (1 2) (1 2)))
+  (check-equal? (sequence->list (sequence-repeat-each (in-range 3) 2)) '(0 0 1 1 2 2))
 
 )

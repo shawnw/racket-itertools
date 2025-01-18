@@ -157,3 +157,16 @@ Returns a sequence of the first @code{len} elements of @code{seq} (Or less if @c
  All sequences should return the same number of values. Equivalent to @tt{more_itertools.interleave_longest}.
 
 }
+
+@defproc[(in-repeat* [val any/c] ...+ [#:count count (or/c #f exact-positive-integer?) #f]) sequence?]{
+
+A version of @code{in-repeat} that can generate multi-valued sequences.
+
+}
+
+@defproc[(sequence-repeat-each (seq sequence?) [n exact-positive-integer? 2]) sequence?]{
+
+ Return a new sequence that consists of each element of @code{seq} repeated @code{n} times.
+ Equivalent to @tt{more_itertools.repeat_each}.
+
+}
